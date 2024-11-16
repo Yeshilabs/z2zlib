@@ -1,5 +1,5 @@
 {
-  "name": "my-ts-library",
+  "name": "z2zlib",
   "version": "0.0.1",
   "description": "z2zlib",
   "main": "dist/index.js",
@@ -13,7 +13,7 @@
     "test:watch": "vitest"
   },
   "keywords": ["typescript", "library"],
-  "author": "Your Name",
+  "author": "Yofi",
   "license": "MIT",
   "repository": {
     "type": "git",
