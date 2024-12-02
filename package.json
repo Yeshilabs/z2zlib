@@ -5,14 +5,19 @@
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
     "test": "vitest run",
     "test:watch": "vitest"
   },
-  "keywords": ["typescript", "library"],
+  "keywords": [
+    "typescript",
+    "library"
+  ],
   "author": "Yofi",
   "license": "MIT",
   "repository": {
@@ -22,6 +27,11 @@
   "bugs": {
     "url": "https://github.com/your-username/my-ts-library/issues"
   },
-  "homepage": "https://github.com/your-username/my-ts-library#readme"
+  "homepage": "https://github.com/your-username/my-ts-library#readme",
+  "devDependencies": {
+    "socket.io": "^4.8.1",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
 }
-
