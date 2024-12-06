@@ -34,12 +34,17 @@ class MockRTCPeerConnection {
   addIceCandidate = vi.fn(async (candidate: RTCIceCandidate) => {
     this.iceCandidates.push(candidate);
   });
+  close = vi.fn(() => {
+    this.dataChannel = null;
+    console.log('MockRTCPeerConnection closed');
+  });
   onicecandidate: ((event: { candidate: RTCIceCandidate | null }) => void) | null = null;
 
   triggerICECandidate(candidate: RTCIceCandidate) {
     if (this.onicecandidate) this.onicecandidate({ candidate });
   }
 }
+
 
 // Mock for global RTCPeerConnection
 global.RTCPeerConnection = MockRTCPeerConnection as any;
