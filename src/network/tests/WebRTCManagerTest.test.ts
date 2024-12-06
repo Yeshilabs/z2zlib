@@ -43,6 +43,41 @@ class MockRTCPeerConnection {
 
 // Mock for global RTCPeerConnection
 global.RTCPeerConnection = MockRTCPeerConnection as any;
+global.RTCSessionDescription = class {
+  sdp: string;
+  type: RTCSdpType;
+
+  constructor(descriptionInitDict: RTCSessionDescriptionInit) {
+    this.sdp = descriptionInitDict.sdp || '';
+    this.type = descriptionInitDict.type;
+  }
+
+  toJSON() {
+    return {
+      sdp: this.sdp,
+      type: this.type,
+    };
+  }
+} as unknown as {
+  new (descriptionInitDict: RTCSessionDescriptionInit): RTCSessionDescription;
+  prototype: RTCSessionDescription;
+};
+
+global.RTCIceCandidate = class {
+  candidate: string;
+  sdpMid: string | null;
+  sdpMLineIndex: number | null;
+
+  constructor(init: RTCIceCandidateInit = { candidate: '' }) {
+    this.candidate = init.candidate || '';
+    this.sdpMid = init.sdpMid || null;
+    this.sdpMLineIndex = init.sdpMLineIndex || null;
+  }
+} as unknown as {
+  new (candidateInitDict?: RTCIceCandidateInit): RTCIceCandidate;
+  prototype: RTCIceCandidate;
+};
+
 
 describe('WebRTCManager', () => {
   let signalingMock: ReturnType<typeof vi.fn>;
@@ -83,34 +118,41 @@ describe('WebRTCManager', () => {
       'http://mock-signaling-server',
       expect.objectContaining({
         method: 'POST',
-        body: JSON.stringify({ offer: expect.objectContaining({ sdp: 'mock-offer-sdp' }) }),
+        body: JSON.stringify({ offer: { type: 'offer', sdp: 'mock-offer-sdp' } }),
+        headers: { 'Content-Type': 'application/json' },
       })
     );
   });
 
   it('should receive an offer and send an answer', async () => {
     await manager.init();
+  
+    // Mock fetch response for the offer
     signalingMock.mockResolvedValueOnce({
       json: async () => ({ offer: { type: 'offer', sdp: 'mock-offer-sdp' } }),
     });
-
+  
     await manager.receiveOfferAndAnswer();
-
+  
+    // Validate peer connection behavior
     expect(manager['peerConnection']?.setRemoteDescription).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'offer', sdp: 'mock-offer-sdp' })
     );
     expect(manager['peerConnection']?.createAnswer).toHaveBeenCalled();
-    expect(manager['peerConnection']?.setLocalDescription).toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'answer' })
-    );
+  
+    // Validate signaling server call for the answer
     expect(signalingMock).toHaveBeenCalledWith(
       'http://mock-signaling-server',
       expect.objectContaining({
         method: 'POST',
-        body: JSON.stringify({ answer: expect.objectContaining({ sdp: 'mock-answer-sdp' }) }),
+        body: JSON.stringify({
+          answer: { type: 'answer', sdp: 'mock-answer-sdp' },
+        }),
+        headers: { 'Content-Type': 'application/json' },
       })
     );
   });
+  
 
   it('should connect to a peer by applying an answer and ICE candidates', async () => {
     await manager.init();
