@@ -33,7 +33,8 @@
     "tsup": "^8.3.5",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8",
-    "webrtc-mock": "^1.1.6"
+    "webrtc-mock": "^1.1.6",
+    "zkapp-cli": "^0.22.3"
   },
   "dependencies": {
     "socket.io-client": "^4.8.1"
