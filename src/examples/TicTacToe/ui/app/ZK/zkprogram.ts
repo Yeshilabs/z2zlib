@@ -9,12 +9,9 @@ import {
     Poseidon,
 } from 'o1js';
 
-export { MyProgram, MyProof };
-
-let MyProgram = ZkProgram({
+const MyProgram: ReturnType<typeof ZkProgram> = ZkProgram({
     name: 'example-with-output',
     publicOutput: Field,
-
     methods: {
         baseCase: {
             privateInputs: [],
@@ -22,7 +19,6 @@ let MyProgram = ZkProgram({
                 return Field(0);
             },
         },
-
         inductiveCase: {
             privateInputs: [],
             async method() {
@@ -32,4 +28,6 @@ let MyProgram = ZkProgram({
     },
 });
 
-const MyProof = ZkProgram.Proof(MyProgram);
+const MyProof: ReturnType<typeof ZkProgram.Proof> = ZkProgram.Proof(MyProgram);
+
+export { MyProgram, MyProof };

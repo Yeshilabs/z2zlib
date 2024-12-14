@@ -1,43 +1,27 @@
 import { Server, Socket } from "socket.io";
-
-type RTCIceCandidate = {
-    candidate: string;
-    sdpMid?: string;
-    sdpMLineIndex?: number;
-};
-
-type SignalingEvents = {
-    join: (roomName: string) => void;
-    ready: (roomName: string) => void;
-    "ice-candidate": (candidate: RTCIceCandidate, roomName: string) => void;
-    offer: (offer: any, roomName: string) => void;
-    answer: (answer: any, roomName: string) => void;
-    leave: (roomName: string) => void;
-};
+import { RTCIceCandidate, SignalingEvents } from '../types/SignalingTypes';
 
 class SignalingServer {
-    private io: Server;
+    protected io: Server;
 
     constructor(server: any) {
         this.io = new Server(server);
         this.setupListeners();
     }
 
-    private setupListeners(): void {
+    protected setupListeners(): void {
         this.io.on("connection", (socket: Socket) => {
             console.log("User connected: ", socket.id);
-
             this.setupSocketEvents(socket);
         });
     }
 
-    private setupSocketEvents(socket: Socket): void {
+    protected setupSocketEvents(socket: Socket): void {
         const { io } = this;
-
+        
         socket.on("join", (roomName: string) => {
             console.log("User joined room: ", roomName);
             const room = io.sockets.adapter.rooms.get(roomName);
-
             if (!room) {
                 socket.join(roomName);
                 socket.emit("created", roomName);

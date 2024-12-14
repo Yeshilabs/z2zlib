@@ -14,13 +14,19 @@ const nextConfig = {
         o1js: path.resolve(__dirname, 'node_modules/o1js/dist/web/index.js'),
       };
     } else {
-      config.externals.push('o1js') // https://nextjs.org/docs/app/api-reference/next-config-js/serverExternalPackages
+      config.externals.push('o1js')
     }
-    config.experiments = { ...config.experiments, topLevelAwait: true };
+    config.experiments = { 
+      ...config.experiments, 
+      topLevelAwait: true,
+      layers: true
+    };
+    
+    // Add resolution for .ts files
+    config.resolve.extensions = [...config.resolve.extensions, '.ts', '.tsx'];
+    
     return config;
   },
-  // To enable o1js for the web, we must set the COOP and COEP headers.
-  // See here for more information: https://docs.minaprotocol.com/zkapps/how-to-write-a-zkapp-ui#enabling-coop-and-coep-headers
   async headers() {
     return [
       {

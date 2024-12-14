@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import io, { type Socket } from 'socket.io-client';
-import { generateBaseCaseProof } from '../../ZK/prove';
+import { generateBaseCaseProof, type ProofOutput } from '../../ZK/prove';
 import { verifyProof } from '../../ZK/verify';
 import { JsonProof } from 'o1js';
 import useSocket from '../../../hooks/useSocket';

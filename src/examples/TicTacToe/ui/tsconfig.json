@@ -1,14 +1,17 @@
 {
   "compilerOptions": {
+    "moduleDetection": "force",
+    "composite": true,
+    "allowImportingTsExtensions": true,
     "target": "es2020",
     "module": "esnext",
     "lib": ["dom", "dom.iterable", "esnext"],
     "strict": true,
-    "strictPropertyInitialization": false, // to enable generic constructors, e.g. on CircuitValue
+    "strictPropertyInitialization": false,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "esModuleInterop": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",  // Changed from "node" to "bundler"
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "allowJs": true,
@@ -21,8 +24,10 @@
     "incremental": true,
     "resolveJsonModule": true,
     "jsx": "preserve",
+    "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./*"],  // Changed from "./src/*" to "./*" since we're already in the UI directory
+      "z2zlib/*": ["../../../../../*"]  // Added to resolve imports from main library
     },
     "plugins": [
       {
@@ -30,6 +35,12 @@
       }
     ]
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    "../../../../../**/*.ts"  // Added to include files from main library
+  ],
   "exclude": ["node_modules"]
 }
