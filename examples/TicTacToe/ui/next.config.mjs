@@ -13,6 +13,9 @@ const nextConfig = {
         ...config.resolve.alias,
         o1js: path.resolve(__dirname, 'node_modules/o1js/dist/web/index.js'),
       };
+      config.resolve.fallback = {
+        fs: false,
+      };
     } else {
       config.externals.push('o1js')
     }
