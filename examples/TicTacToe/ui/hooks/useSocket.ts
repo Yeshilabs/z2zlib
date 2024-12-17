@@ -11,7 +11,6 @@ const useSocket = () => {
           console.log('Initializing socket client side');
           const response = await fetch('/api/socket');
           if (response.ok) {
-            console.log('Socket server initialized successfully');
             socketCreated.current = true;
           } else {
             console.error('Failed to initialize socket server:', response.statusText);

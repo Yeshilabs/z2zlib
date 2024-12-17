@@ -10,11 +10,13 @@
     "ts-watch": "tsc --noEmit --incremental --watch"
   },
   "dependencies": {
+    "bufferutil": "^4.0.8",
     "next": "14.2.12",
     "o1js": "^1.*",
     "react": "^18",
     "react-dom": "^18",
     "socket.io": "^4.8.1",
+    "utf-8-validate": "^6.0.5",
     "ws": "^8.18.0",
     "z2zlib": "file:../../../.."
   },

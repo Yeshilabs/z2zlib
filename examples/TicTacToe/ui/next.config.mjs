@@ -16,6 +16,11 @@ const nextConfig = {
     } else {
       config.externals.push('o1js')
     }
+    config.externals.push({
+      'utf-8-validate': 'commonjs utf-8-validate',
+      'bufferutil': 'commonjs bufferutil',
+    });
+    
     config.experiments = { 
       ...config.experiments, 
       topLevelAwait: true,
