@@ -37,19 +37,18 @@ export class StateManager<S, M> {
 
   // Generate a zero-knowledge proof for a state transition
   async generateTransitionProof(prevState: S, nextState: S, move: M): Promise<JsonProof> {
-    // Use a ZK library to generate a proof
-    return {}; 
+    return new {}; 
   }
 
   // Verify a zero-knowledge proof
   async verifyProof(proof: JsonProof): Promise<boolean> {
-    // Use a ZK library to verify the proof
+    
     return true; 
   }
 
   // Verify signatures (if applicable)
   verifySignature(message: string, signature: string, publicKey: string): boolean {
-    // Implement signature verification logic
+    // Implement signature verification logic using ECDSA from o1js
     return true; 
   }
 }

@@ -1,12 +1,6 @@
 import {
     Field,
     ZkProgram,
-    verify,
-    Proof,
-    JsonProof,
-    Provable,
-    Empty,
-    Poseidon,
 } from 'o1js';
 
 const MyProgram: ReturnType<typeof ZkProgram> = ZkProgram({
