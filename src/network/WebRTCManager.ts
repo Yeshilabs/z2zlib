@@ -31,8 +31,7 @@ export class WebRTCManager {
 
   }
 
-  async init(isHost: boolean): Promise<void> {
-    this.isHost = isHost;
+  async init(): Promise<void> {
     this.peerConnection = new RTCPeerConnection(this.iceServers);
 
     this.peerConnection.onicecandidate = (event) => {

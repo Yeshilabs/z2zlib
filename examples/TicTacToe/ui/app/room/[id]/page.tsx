@@ -28,7 +28,8 @@ const Room = () => {
         socketRef.current = io();
         
         webRTCManagerRef.current = new WebRTCManager(socketRef.current, roomName);
-        
+        //webRTCManagerRef.current.init(isHost);
+
         // Set message callback
         webRTCManagerRef.current.setOnMessageCallback((data) => {
             console.log("Received JSON data:", data);
