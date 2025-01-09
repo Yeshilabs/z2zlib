@@ -1,4 +1,3 @@
-import { Poseidon, Field } from 'o1js';
 // TODO: move the types to src/type/TicTacToeTypes.ts
 export type Empty = 0;
 export type Player = 1 | 2;
@@ -42,31 +41,3 @@ export const checkWinner = (board: Cell[]): Player | null => {
 export const isDraw = (board: Cell[]): boolean => {
   return board.every((cell) => cell !== 0);
 };
-
-function hashState(state: GameState): Field {
-    const stateArray = [
-        ...state.board.map(cell => Field(cell)),
-        Field(state.currentPlayer),
-        Field(state.winner !== null ? state.winner : 0),
-        Field(state.isDraw ? 1 : 0)
-    ];
-    return Poseidon.hash(stateArray);
-}
-
-// Function to verify a state transition
-function verifyTransition(prevState: GameState, nextState: GameState, move: any): boolean {
-    // Implement transition verification logic
-    return true; // Placeholder
-}
-
-// Function to generate a zero-knowledge proof for a state transition
-async function generateTransitionProof(prevState: GameState, nextState: GameState, move: any): Promise<any> {
-    // Use a ZK library to generate a proof
-    return {}; // Placeholder
-}
-
-// Function to verify a zero-knowledge proof
-async function verifyProof(proof: any): Promise<boolean> {
-    // Use a ZK library to verify the proof
-    return true; // Placeholder
-}
