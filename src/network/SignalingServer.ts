@@ -33,6 +33,7 @@ export class SignalingServer extends Server {
             if (!room) {
                 socket.join(roomName);
                 socket.emit("created", roomName);
+                console.log("emmiting created");
 
                 console.log("Room created:", roomName);
             } else if (room.size === 1) {

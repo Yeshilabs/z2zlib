@@ -36,19 +36,26 @@ declare class WebRTCManager {
     private roomName;
     private iceServers;
     private peerConnection;
-    private dataChannel;
+    dataChannel: RTCDataChannel | null;
     private onMessageCallback;
-    private isHost;
+    isHost: boolean;
     constructor(socket: Socket, roomName: string, iceServers?: RTCConfiguration);
-    init(isHost: boolean): Promise<void>;
-    private setupDataChannel;
-    handleOffer(offer: RTCSessionDescriptionInit): Promise<void>;
-    handleAnswer(answer: RTCSessionDescriptionInit): Promise<void>;
-    handleIceCandidate(candidate: RTCIceCandidateInit): Promise<void>;
-    createAndSendOffer(): Promise<void>;
-    setOnMessageCallback(callback: (data: JsonData) => void): void;
-    sendData(data: JsonData): void;
-    close(): void;
+    init(): void;
+    private setupWSListeners;
+    private handleConnect;
+    private handleRoomCreated;
+    private handleRoomJoined;
+    private initiateCall;
+    private createPeerConnection;
+    private setupDataChannelListener;
+    private handleDataChannelMessage;
+    private handleOffer;
+    private handleAnswer;
+    private handleIceCandidate;
+    private createAndSendOffer;
+    setOnMessageCallback: (callback: (data: JsonData) => void) => void;
+    sendData: (data: JsonData) => void;
+    close: () => void;
 }
 
 export { type JsonData, type RTCIceCandidate, type SignalingEvents, SignalingServer, WebRTCManager, isJsonProof };

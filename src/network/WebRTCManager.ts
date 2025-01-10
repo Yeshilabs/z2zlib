@@ -16,9 +16,9 @@ export function isJsonProof(data: unknown): data is JsonProof {
 
 export class WebRTCManager {
   private peerConnection: RTCPeerConnection | null = null;
-  private dataChannel: RTCDataChannel | null = null;
+  dataChannel: RTCDataChannel | null = null;
   private onMessageCallback: ((data: JsonData) => void) | null = null;
-  private isHost: boolean = false;
+  isHost: boolean = false;
 
   constructor(
     private socket: Socket,
@@ -26,61 +26,130 @@ export class WebRTCManager {
     private iceServers: RTCConfiguration = {
       iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
     }
-  ) { 
-    console.log("WebRTCManager created with room:", roomName);
-
+  ) {}
+  
+  init(): void {
+    console.log('Initializing WebRTCManager');
+    this.setupWSListeners();    
   }
 
-  async init(): Promise<void> {
-    this.peerConnection = new RTCPeerConnection(this.iceServers);
+  private setupWSListeners = ():void => {
+    console.log('Setting up WebRTCManager listeners');
+    this.socket.on('connect', this.handleConnect);
+    this.socket.on('created', this.handleRoomCreated);
+    this.socket.on('joined', this.handleRoomJoined);
+    this.socket.on('ready', this.initiateCall);
+    this.socket.on('offer', this.handleOffer);
+    this.socket.on('answer', this.handleAnswer);
+    this.socket.on('ice-candidate', this.handleIceCandidate)
+    this.socket.on('leave', this.close);
+  }
 
-    this.peerConnection.onicecandidate = (event) => {
+  private handleConnect = ():void =>{
+    console.log('Connected to signaling server');
+    this.socket.emit('join', this.roomName);
+  }
+
+  private handleRoomCreated = ():void => {
+    console.log('Room created - You are the host!');
+    this.isHost = true;
+  }
+
+  private handleRoomJoined= ():void =>  {
+    console.log('Room joined - You are the peer');
+    this.isHost = false;
+    this.socket.emit('ready', this.roomName);
+  }
+
+  private initiateCall = async ():Promise<void> => {
+    if (this.isHost) {
+      try {
+        this.peerConnection = this.createPeerConnection();
+        const offer = await this.peerConnection.createOffer();
+        await this.peerConnection.setLocalDescription(offer);
+        console.log("Sending offer:", offer);
+       this.socket.emit('offer', offer, this.roomName);
+      } catch (error) {
+        console.error("Error initiating call:", error);
+      }
+    }
+  };
+
+  private createPeerConnection = ():RTCPeerConnection  => {
+    const connection = new RTCPeerConnection(this.iceServers);
+
+    connection.onicecandidate = (event) => {
       if (event.candidate) {
         console.log("Sending ICE candidate");
         this.socket.emit('ice-candidate', event.candidate, this.roomName);
       }
     };
 
-    this.peerConnection.oniceconnectionstatechange = () => {
-      console.log('ICE Connection State:', this.peerConnection?.iceConnectionState);
+    connection.oniceconnectionstatechange = () => {
+      console.log('ICE Connection State:', connection.iceConnectionState);
     };
 
     if (this.isHost) {
       console.log("Creating data channel as host");
-      this.dataChannel = this.peerConnection.createDataChannel('jsonChannel');
-      this.setupDataChannel(this.dataChannel);
+      const dataChannel = connection.createDataChannel('jsonChannel');
+      this.setupDataChannelListener(dataChannel);
+      this.dataChannel = dataChannel;
     } else {
       console.log("Setting up data channel handler as peer");
-      this.peerConnection.ondatachannel = (event) => {
-        console.log("Received data channel");
-        this.dataChannel = event.channel;
-        this.setupDataChannel(event.channel);
+      connection.ondatachannel = (dc) => {
+        this.setupDataChannelListener(dc.channel);
+        this.dataChannel = dc.channel;
       };
+    }
+
+    return connection;
+  }
+  
+  private setupDataChannelListener = (channel: RTCDataChannel): void  => {
+    channel.onopen = () => console.log('Data channel opened');
+    channel.onclose = () => console.log('Data channel closed');
+    channel.onmessage = this.handleDataChannelMessage;
+  }
+
+  private handleDataChannelMessage = (event: MessageEvent): void  => {
+    try {
+      const jsonData = JSON.parse(event.data);
+      if (this.onMessageCallback) {
+        this.onMessageCallback(jsonData);
+      } else {
+        console.log("Received JSON data : ", jsonData);
+      }
+    } catch (error) {
+      console.error("Error parsing message:", error);
     }
   }
 
+  // private setupDataChannel(channel: RTCDataChannel): void {
+  //   channel.onopen = () => console.log('Data channel opened');
+  //   channel.onclose = () => console.log('Data channel closed');
+  //   channel.onmessage = (event: MessageEvent) => {
+  //     try {
+  //       const jsonData = JSON.parse(event.data);
+  //       if (this.onMessageCallback) {
+  //         this.onMessageCallback(jsonData);
+  //       }
+  //     } catch (error) {
+  //       console.error("Error parsing message:", error);
+  //     }
+  //   };
+  // }
 
-  private setupDataChannel(channel: RTCDataChannel): void {
-    channel.onopen = () => console.log('Data channel opened');
-    channel.onclose = () => console.log('Data channel closed');
-    channel.onmessage = (event: MessageEvent) => {
-      try {
-        const jsonData = JSON.parse(event.data);
-        if (this.onMessageCallback) {
-          this.onMessageCallback(jsonData);
-        }
-      } catch (error) {
-        console.error("Error parsing message:", error);
-      }
-    };
-  }
-
-  async handleOffer(offer: RTCSessionDescriptionInit): Promise<void> {
-    if (!this.peerConnection) throw new Error("PeerConnection not initialized");
+  private handleOffer = async (offer: RTCSessionDescriptionInit): Promise<void>  => {
+    //if (!this.peerConnection) throw new Error("PeerConnection not initialized");
     if (this.isHost) return;
+    this.peerConnection = this.createPeerConnection();
 
     try {
-      await this.peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+      const sessionDescription = new RTCSessionDescription({
+        type: offer.type,
+        sdp: offer.sdp
+      });
+      await this.peerConnection.setRemoteDescription(sessionDescription);
       const answer = await this.peerConnection.createAnswer();
       await this.peerConnection.setLocalDescription(answer);
       this.socket.emit('answer', answer, this.roomName);
@@ -89,18 +158,19 @@ export class WebRTCManager {
     }
   }
 
-  async handleAnswer(answer: RTCSessionDescriptionInit): Promise<void> {
+  private handleAnswer = async (answer: RTCSessionDescriptionInit): Promise<void>  =>{
     if (!this.peerConnection) throw new Error("PeerConnection not initialized");
     if (!this.isHost) return;
 
     try {
       await this.peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+      console.log("Remote description set successfully");
     } catch (error) {
       console.error("Error handling answer:", error);
     }
   }
 
-  async handleIceCandidate(candidate: RTCIceCandidateInit): Promise<void> {
+  private handleIceCandidate = async (candidate: RTCIceCandidateInit): Promise<void> => {
     try {
       if (this.peerConnection?.remoteDescription) {
         await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
@@ -112,7 +182,7 @@ export class WebRTCManager {
     }
   }
 
-  async createAndSendOffer(): Promise<void> {
+  private createAndSendOffer = async (): Promise<void> => {
     if (!this.peerConnection) throw new Error("PeerConnection not initialized");
     if (!this.isHost) return;
 
@@ -125,11 +195,11 @@ export class WebRTCManager {
     }
   }
 
-  setOnMessageCallback(callback: (data: JsonData) => void): void {
+  setOnMessageCallback = (callback: (data: JsonData) => void): void  => {
     this.onMessageCallback = callback;
   }
 
-  sendData(data: JsonData): void {
+  sendData = (data: JsonData): void  => {
     if (this.dataChannel?.readyState === "open") {
       this.dataChannel.send(JSON.stringify(data));
     } else {
@@ -138,7 +208,7 @@ export class WebRTCManager {
     }
   }
 
-  close(): void {
+  close = (): void => {
     this.dataChannel?.close();
     this.peerConnection?.close();
     this.peerConnection = null;
