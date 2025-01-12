@@ -26,7 +26,7 @@ const Room = () => {
   useEffect(() => {
     console.log('Initializing socket connection...');
     socketRef.current = io();
-    if (roomName) {
+    if (roomName && !webRTCManagerRef.current) {
       webRTCManagerRef.current = new WebRTCManager(socketRef.current, roomName.toString());
       webRTCManagerRef.current.init();
       setIsHost(webRTCManagerRef.current.isHost);
