@@ -115,10 +115,11 @@ var WebRTCManager = class {
   initiateCall = async () => {
     if (this.isHost) {
       try {
+        console.log("INSIDE INITIATE CALL FUNCTION");
         this.peerConnection = this.createPeerConnection();
         const offer = await this.peerConnection.createOffer();
         await this.peerConnection.setLocalDescription(offer);
-        console.log("Sending offer:", offer);
+        console.log("HOST Sending offer:", offer);
         this.socket.emit("offer", offer, this.roomName);
       } catch (error) {
         console.error("Error initiating call:", error);
@@ -139,13 +140,13 @@ var WebRTCManager = class {
     if (this.isHost) {
       console.log("Creating data channel as host");
       const dataChannel = connection.createDataChannel("jsonChannel");
-      this.setupDataChannelListener(dataChannel);
       this.dataChannel = dataChannel;
+      this.setupDataChannelListener(dataChannel);
     } else {
       console.log("Setting up data channel handler as peer");
       connection.ondatachannel = (dc) => {
-        this.setupDataChannelListener(dc.channel);
         this.dataChannel = dc.channel;
+        this.setupDataChannelListener(dc.channel);
       };
     }
     return connection;
@@ -182,24 +183,21 @@ var WebRTCManager = class {
   //   };
   // }
   handleOffer = async (offer) => {
-    if (this.isHost) return;
+    if (this.isHost || this.peerConnection) return;
+    console.log("peer handling offer");
     this.peerConnection = this.createPeerConnection();
     try {
-      const sessionDescription = new RTCSessionDescription({
-        type: offer.type,
-        sdp: offer.sdp
-      });
-      await this.peerConnection.setRemoteDescription(sessionDescription);
+      await this.peerConnection.setRemoteDescription(offer);
       const answer = await this.peerConnection.createAnswer();
-      await this.peerConnection.setLocalDescription(answer);
       this.socket.emit("answer", answer, this.roomName);
+      await this.peerConnection.setLocalDescription(answer);
     } catch (error) {
       console.error("Error handling offer:", error);
     }
   };
   handleAnswer = async (answer) => {
     if (!this.peerConnection) throw new Error("PeerConnection not initialized");
-    if (!this.isHost) return;
+    if (!this.isHost) throw new Error("Peer cannot handle answer");
     try {
       await this.peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
       console.log("Remote description set successfully");
@@ -209,10 +207,12 @@ var WebRTCManager = class {
   };
   handleIceCandidate = async (candidate) => {
     try {
-      if (this.peerConnection?.remoteDescription) {
-        await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
-      } else {
-        console.log("Queuing ICE candidate - no remote description");
+      if (this.peerConnection) {
+        if (this.peerConnection.remoteDescription) {
+          await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+        } else {
+          console.log("Queuing ICE candidate - no remote description");
+        }
       }
     } catch (error) {
       console.error("Error handling ICE candidate:", error);

@@ -26,14 +26,14 @@ export class WebRTCManager {
     private iceServers: RTCConfiguration = {
       iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
     }
-  ) {}
-  
+  ) { }
+
   init(): void {
     console.log('Initializing WebRTCManager');
-    this.setupWSListeners();    
+    this.setupWSListeners();
   }
 
-  private setupWSListeners = ():void => {
+  private setupWSListeners = (): void => {
     console.log('Setting up WebRTCManager listeners');
     this.socket.on('connect', this.handleConnect);
     this.socket.on('created', this.handleRoomCreated);
@@ -45,37 +45,38 @@ export class WebRTCManager {
     this.socket.on('leave', this.close);
   }
 
-  private handleConnect = ():void =>{
+  private handleConnect = (): void => {
     console.log('Connected to signaling server');
     this.socket.emit('join', this.roomName);
   }
 
-  private handleRoomCreated = ():void => {
+  private handleRoomCreated = (): void => {
     console.log('Room created - You are the host!');
     this.isHost = true;
   }
 
-  private handleRoomJoined= ():void =>  {
+  private handleRoomJoined = (): void => {
     console.log('Room joined - You are the peer');
     this.isHost = false;
     this.socket.emit('ready', this.roomName);
   }
 
-  private initiateCall = async ():Promise<void> => {
+  private initiateCall = async (): Promise<void> => {
     if (this.isHost) {
       try {
+        console.log("INSIDE INITIATE CALL FUNCTION");
         this.peerConnection = this.createPeerConnection();
         const offer = await this.peerConnection.createOffer();
         await this.peerConnection.setLocalDescription(offer);
-        console.log("Sending offer:", offer);
-       this.socket.emit('offer', offer, this.roomName);
+        console.log("HOST Sending offer:", offer);
+        this.socket.emit('offer', offer, this.roomName);
       } catch (error) {
         console.error("Error initiating call:", error);
       }
     }
   };
 
-  private createPeerConnection = ():RTCPeerConnection  => {
+  private createPeerConnection = (): RTCPeerConnection => {
     const connection = new RTCPeerConnection(this.iceServers);
 
     connection.onicecandidate = (event) => {
@@ -92,26 +93,26 @@ export class WebRTCManager {
     if (this.isHost) {
       console.log("Creating data channel as host");
       const dataChannel = connection.createDataChannel('jsonChannel');
-      this.setupDataChannelListener(dataChannel);
       this.dataChannel = dataChannel;
+      this.setupDataChannelListener(dataChannel);
     } else {
       console.log("Setting up data channel handler as peer");
       connection.ondatachannel = (dc) => {
-        this.setupDataChannelListener(dc.channel);
         this.dataChannel = dc.channel;
+        this.setupDataChannelListener(dc.channel);
       };
     }
 
     return connection;
   }
-  
-  private setupDataChannelListener = (channel: RTCDataChannel): void  => {
+
+  private setupDataChannelListener = (channel: RTCDataChannel): void => {
     channel.onopen = () => console.log('Data channel opened');
     channel.onclose = () => console.log('Data channel closed');
     channel.onmessage = this.handleDataChannelMessage;
   }
 
-  private handleDataChannelMessage = (event: MessageEvent): void  => {
+  private handleDataChannelMessage = (event: MessageEvent): void => {
     try {
       const jsonData = JSON.parse(event.data);
       if (this.onMessageCallback) {
@@ -139,28 +140,30 @@ export class WebRTCManager {
   //   };
   // }
 
-  private handleOffer = async (offer: RTCSessionDescriptionInit): Promise<void>  => {
+  private handleOffer = async (offer: RTCSessionDescriptionInit): Promise<void> => {
     //if (!this.peerConnection) throw new Error("PeerConnection not initialized");
-    if (this.isHost) return;
+    if (this.isHost || this.peerConnection) return;
+    console.log("peer handling offer")
     this.peerConnection = this.createPeerConnection();
 
     try {
-      const sessionDescription = new RTCSessionDescription({
-        type: offer.type,
-        sdp: offer.sdp
-      });
-      await this.peerConnection.setRemoteDescription(sessionDescription);
+      // const sessionDescription = new RTCSessionDescription({
+      //   type: offer.type,
+      //   sdp: offer.sdp
+      // });
+      // await this.peerConnection.setRemoteDescription(sessionDescription);
+      await this.peerConnection.setRemoteDescription(offer);
       const answer = await this.peerConnection.createAnswer();
-      await this.peerConnection.setLocalDescription(answer);
       this.socket.emit('answer', answer, this.roomName);
+      await this.peerConnection.setLocalDescription(answer);
     } catch (error) {
       console.error("Error handling offer:", error);
     }
   }
 
-  private handleAnswer = async (answer: RTCSessionDescriptionInit): Promise<void>  =>{
+  private handleAnswer = async (answer: RTCSessionDescriptionInit): Promise<void> => {
     if (!this.peerConnection) throw new Error("PeerConnection not initialized");
-    if (!this.isHost) return;
+    if (!this.isHost) throw new Error("Peer cannot handle answer");
 
     try {
       await this.peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
@@ -172,15 +175,18 @@ export class WebRTCManager {
 
   private handleIceCandidate = async (candidate: RTCIceCandidateInit): Promise<void> => {
     try {
-      if (this.peerConnection?.remoteDescription) {
-        await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
-      } else {
-        console.log("Queuing ICE candidate - no remote description");
+      if (this.peerConnection) {
+        if (this.peerConnection.remoteDescription) {
+          await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+        } else {
+          console.log("Queuing ICE candidate - no remote description");
+        }
       }
-    } catch (error) {
+    }
+    catch (error) {
       console.error("Error handling ICE candidate:", error);
     }
-  }
+  };
 
   private createAndSendOffer = async (): Promise<void> => {
     if (!this.peerConnection) throw new Error("PeerConnection not initialized");
@@ -195,11 +201,11 @@ export class WebRTCManager {
     }
   }
 
-  setOnMessageCallback = (callback: (data: JsonData) => void): void  => {
+  setOnMessageCallback = (callback: (data: JsonData) => void): void => {
     this.onMessageCallback = callback;
   }
 
-  sendData = (data: JsonData): void  => {
+  sendData = (data: JsonData): void => {
     if (this.dataChannel?.readyState === "open") {
       this.dataChannel.send(JSON.stringify(data));
     } else {
