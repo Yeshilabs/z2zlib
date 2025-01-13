@@ -1,13 +1,19 @@
-export interface Participant {
-  id: string;
-  publicKey: string;
-}
+import { Field, Crypto, Bytes, createForeignCurve, createEcdsa } from 'o1js';
+
+
+// o1js crypto primitives for ECDSA signatures on the Secp256k1 curve
+class Secp256k1 extends createForeignCurve(Crypto.CurveParams.Secp256k1) {}
+class Scalar extends Secp256k1.Scalar {}
+class Ecdsa extends createEcdsa(Secp256k1) {}
+class Bytes32 extends Bytes(32) {}
 
 export class KeyExchangeManager {
-  private participants: Map<string, Participant>;
+  private localPublicKey: Field | null = null;
+  private localPrivateKey: Field | null = null;
+  private peersPublicKeys: Map<string, Field> = new Map();
 
   constructor() {
-    this.participants = new Map();
+
   }
 
   // Register a participant with their public key

@@ -1,5 +1,6 @@
 import { Socket } from 'socket.io-client';
-import { JsonProof } from 'o1js';
+import { JsonProof} from 'o1js';
+import { KeyExchangeManager } from './KeyExchangeManager';
 
 export type JsonData = JsonProof | { [key: string]: any };
 
@@ -18,6 +19,8 @@ export class WebRTCManager {
   private peerConnection: RTCPeerConnection | null = null;
   dataChannel: RTCDataChannel | null = null;
   private onMessageCallback: ((data: JsonData) => void) | null = null;
+  private keyExchangeManager: KeyExchangeManager | null;
+
   isHost: boolean = false;
 
   constructor(
@@ -26,7 +29,10 @@ export class WebRTCManager {
     private iceServers: RTCConfiguration = {
       iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
     }
-  ) { }
+  ) { 
+    this.keyExchangeManager = new KeyExchangeManager();
+  }
+
 
   init(): void {
     console.log('Initializing WebRTCManager');
@@ -125,33 +131,12 @@ export class WebRTCManager {
     }
   }
 
-  // private setupDataChannel(channel: RTCDataChannel): void {
-  //   channel.onopen = () => console.log('Data channel opened');
-  //   channel.onclose = () => console.log('Data channel closed');
-  //   channel.onmessage = (event: MessageEvent) => {
-  //     try {
-  //       const jsonData = JSON.parse(event.data);
-  //       if (this.onMessageCallback) {
-  //         this.onMessageCallback(jsonData);
-  //       }
-  //     } catch (error) {
-  //       console.error("Error parsing message:", error);
-  //     }
-  //   };
-  // }
-
   private handleOffer = async (offer: RTCSessionDescriptionInit): Promise<void> => {
-    //if (!this.peerConnection) throw new Error("PeerConnection not initialized");
     if (this.isHost || this.peerConnection) return;
     console.log("peer handling offer")
     this.peerConnection = this.createPeerConnection();
-
+    
     try {
-      // const sessionDescription = new RTCSessionDescription({
-      //   type: offer.type,
-      //   sdp: offer.sdp
-      // });
-      // await this.peerConnection.setRemoteDescription(sessionDescription);
       await this.peerConnection.setRemoteDescription(offer);
       const answer = await this.peerConnection.createAnswer();
       this.socket.emit('answer', answer, this.roomName);

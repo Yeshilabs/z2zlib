@@ -36,13 +36,7 @@ const Room = () => {
     };
   }, [socketInitialized, roomName]);
 
-  const handleDataChannelMessage = (event: MessageEvent) => {
-    const receivedData = JSON.parse(event.data);
-    console.log("Received JSON data:", receivedData);
-    setHasReceivedProof(true);  // Set proof as received to enable the button
-  };
-
-  const sendJSONData = async () => {
+  const sendProofViaDataChannel = async () => {
     if (webRTCManagerRef.current?.dataChannel?.readyState === 'open') {
       try {
         const jsonProof = await generateBaseCaseProof();
@@ -56,9 +50,9 @@ const Room = () => {
     }
   };
 
-  const handleVerifyProof = () => {
+  const onVerifyProof = () => {
     console.log("Verifying the received proof...");
-    // Add your verification logic here
+    // Add verification logic here
   };
 
   return (
@@ -68,13 +62,13 @@ const Room = () => {
       </h1>
       <div className="flex space-x-4 mb-4">
         <button
-          onClick={sendJSONData}
+          onClick={sendProofViaDataChannel}
           className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
         >
           Send Proof
         </button>
         <button
-          onClick={handleVerifyProof}
+          onClick={onVerifyProof}
           disabled={!hasReceivedProof}
           className={`px-4 py-2 rounded ${hasReceivedProof
             ? 'bg-green-500 text-white hover:bg-green-600'
