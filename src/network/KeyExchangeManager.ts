@@ -1,4 +1,4 @@
-import { Field, Crypto, Bytes, createForeignCurve, createEcdsa } from 'o1js';
+import { Field, Crypto, Bytes, createForeignCurve, createEcdsa, ForeignField, PrivateKey, AlmostForeignField, ForeignCurve, PublicKey, Hash, EcdsaSignature} from 'o1js';
 
 // We are still in the context of a 2-player turn-based execution
 
@@ -7,50 +7,48 @@ class Secp256k1 extends createForeignCurve(Crypto.CurveParams.Secp256k1) {}
 class Scalar extends Secp256k1.Scalar {}
 class Ecdsa extends createEcdsa(Secp256k1) {}
 class Bytes32 extends Bytes(32) {}
+class Bytes43 extends Bytes(43) {}
 
 export class KeyExchangeManager {
-  private localPublicKey: Field | null = null;
-  private localPrivateKey: Field | null = null;
-  private peersPublicKeys: Map<string, Field> = new Map();
-  private participants: Set<string> = new Set();
+  private localPublicKey: ForeignCurve | null = null;
+  private localPrivateKey: AlmostForeignField | null = null;
+  private otherPublicKey: ForeignCurve | null = null;
+  
+  //private peersPublicKeys: Map<string, Field> = new Map();
+  //private participants: Set<string> = new Set();
   
   constructor() {
     // generate the local keypair
-    this.genPrivateKey();
+    this.genKeyPair();
   }
 
-  private genKeyPair() {
+  
+  private genKeyPair(): void {
     if (this.localPublicKey || this.localPrivateKey) {
       throw new Error("local Public or Private keys already generated");
     }
     this.localPrivateKey = Secp256k1.Scalar.random();
+    this.localPublicKey = Secp256k1.generator.scale(this.localPrivateKey);
   }
 
-  // Register Participants with their public key
-  registerParticipant(id: string, publicKey: string): void {
-    if (this.participants.has(id)) {
-      throw new Error(`Participant with ID ${id} is already registered.`);
+  signMessage(m:string): EcdsaSignature  {
+    if (this.localPrivateKey) {
+      let mBytes = Bytes43.fromString(m);
+      let signature = Ecdsa.sign(mBytes.toBytes(), this.localPrivateKey.toBigInt());
+      return signature;
+
+    } else {
+      throw new Error("Private Key not generated");
     }
-    this.participants.set(id, { id, publicKey });
   }
 
-  // Exchange keys between two participants
-  exchangeKeys(participantAId: string, participantBId: string): [Participant, Participant] {
-    const participantA = this.participants.get(participantAId);
-    const participantB = this.participants.get(participantBId);
 
-    if (!participantA || !participantB) {
-      throw new Error('Both participants must be registered before exchanging keys.');
-    }
-
-    // Simulate key exchange process
-    console.log(`Exchanging keys between ${participantAId} and ${participantBId}`);
-    return [participantA, participantB];
+  //TODO : generalize to n participants:
+  registerOtherParticipant(x: string, y: string): void {
+    const xAFF = Secp256k1.Scalar.from(x);
+    const yAFF = Secp256k1.Scalar.from(y);
+    this.otherPublicKey = new ForeignCurve({x:xAFF,y:yAFF});
+    console.log("Registered other participant's public key which is", this.otherPublicKey.toBigint);
   }
 
-  // Verify a participant's public key
-  verifyPublicKey(id: string, publicKey: string): boolean {
-    const participant = this.participants.get(id);
-    return participant ? participant.publicKey === publicKey : false;
-  }
 }
