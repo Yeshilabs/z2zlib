@@ -14,13 +14,14 @@ const Room = () => {
   const params = useParams();
   const roomId = params?.id;
   const webRTCManagerRef = useRef<WebRTCManager | null>(null);
+  const [webRTCManager, setWebRtcManager] = useState<WebRTCManager | null>(null);
   const rtcConnectionRef = useRef<RTCPeerConnection | null>(null);
   const socketRef = useRef<typeof Socket | null>(null);
   const dataChannelRef = useRef<RTCDataChannel | null>(null);
   const hostRef = useRef(false);
   const receivedProof = useRef<JsonProof | null>(null);
   const [hasReceivedProof, setHasReceivedProof] = useState(false);
-  const [roomName, setRoomName] = useState(roomId);
+  const [roomName, setRoomName] = useState(roomId)
   const [isHost, setIsHost] = useState(false);
 
   useEffect(() => {
@@ -29,12 +30,16 @@ const Room = () => {
     if (roomName && !webRTCManagerRef.current) {
       webRTCManagerRef.current = new WebRTCManager(socketRef.current, roomName.toString());
       webRTCManagerRef.current.init();
-      setIsHost(webRTCManagerRef.current.isHost);
     }
     return () => {
       webRTCManagerRef.current?.close();
     };
   }, [socketInitialized, roomName]);
+
+  useEffect(() => {
+    console.log("effecting");
+    setIsHost(webRTCManagerRef.current?.isHost!);
+  }, [webRTCManagerRef.current])
 
   const sendProofViaDataChannel = async () => {
     if (webRTCManagerRef.current?.dataChannel?.readyState === 'open') {
@@ -58,7 +63,7 @@ const Room = () => {
   return (
     <div className="flex flex-col items-center space-y-4 bg-gray-50 p-4 rounded-lg shadow-sm">
       <h1 className="text-2xl font-semibold text-center">
-        Tic Tac Toe - {isHost ? 'Host' : 'Guest'}
+        Tic Tac Toe 
       </h1>
       <div className="flex space-x-4 mb-4">
         <button

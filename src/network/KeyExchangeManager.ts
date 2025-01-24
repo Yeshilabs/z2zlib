@@ -1,5 +1,6 @@
 import { Field, Crypto, Bytes, createForeignCurve, createEcdsa } from 'o1js';
 
+// We are still in the context of a 2-player turn-based execution
 
 // o1js crypto primitives for ECDSA signatures on the Secp256k1 curve
 class Secp256k1 extends createForeignCurve(Crypto.CurveParams.Secp256k1) {}
@@ -11,12 +12,21 @@ export class KeyExchangeManager {
   private localPublicKey: Field | null = null;
   private localPrivateKey: Field | null = null;
   private peersPublicKeys: Map<string, Field> = new Map();
-
+  private participants: Set<string> = new Set();
+  
   constructor() {
-
+    // generate the local keypair
+    this.genPrivateKey();
   }
 
-  // Register a participant with their public key
+  private genKeyPair() {
+    if (this.localPublicKey || this.localPrivateKey) {
+      throw new Error("local Public or Private keys already generated");
+    }
+    this.localPrivateKey = Secp256k1.Scalar.random();
+  }
+
+  // Register Participants with their public key
   registerParticipant(id: string, publicKey: string): void {
     if (this.participants.has(id)) {
       throw new Error(`Participant with ID ${id} is already registered.`);

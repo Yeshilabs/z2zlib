@@ -58,7 +58,7 @@ export class WebRTCManager {
 
   private handleRoomCreated = (): void => {
     console.log('Room created - You are the host!');
-    this.isHost = true;
+  this.isHost = true;
   }
 
   private handleRoomJoined = (): void => {
@@ -70,7 +70,6 @@ export class WebRTCManager {
   private initiateCall = async (): Promise<void> => {
     if (this.isHost) {
       try {
-        console.log("INSIDE INITIATE CALL FUNCTION");
         this.peerConnection = this.createPeerConnection();
         const offer = await this.peerConnection.createOffer();
         await this.peerConnection.setLocalDescription(offer);
