@@ -1,5 +1,5 @@
 import { Socket } from 'socket.io-client';
-import { JsonProof} from 'o1js';
+import { JsonProof } from 'o1js';
 import { KeyExchangeManager } from './KeyExchangeManager';
 
 export type JsonData = JsonProof | { [key: string]: any };
@@ -29,7 +29,7 @@ export class WebRTCManager {
     private iceServers: RTCConfiguration = {
       iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
     }
-  ) { 
+  ) {
     this.keyExchangeManager = new KeyExchangeManager();
   }
 
@@ -58,7 +58,7 @@ export class WebRTCManager {
 
   private handleRoomCreated = (): void => {
     console.log('Room created - You are the host!');
-  this.isHost = true;
+    this.isHost = true;
   }
 
   private handleRoomJoined = (): void => {
@@ -134,7 +134,7 @@ export class WebRTCManager {
     if (this.isHost || this.peerConnection) return;
     console.log("peer handling offer")
     this.peerConnection = this.createPeerConnection();
-    
+
     try {
       await this.peerConnection.setRemoteDescription(offer);
       const answer = await this.peerConnection.createAnswer();
