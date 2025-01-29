@@ -20,6 +20,7 @@ export class WebRTCManager {
   dataChannel: RTCDataChannel | null = null;
   private onMessageCallback: ((data: JsonData) => void) | null = null;
   private keyExchangeManager: KeyExchangeManager | null;
+  private messageListeners: Map<string, (message:JsonData) => void> = new Map();
 
   isHost: boolean = false;
 
@@ -37,6 +38,18 @@ export class WebRTCManager {
   init(): void {
     console.log('Initializing WebRTCManager');
     this.setupWSListeners();
+    this.setupMessageListeners();
+  }
+
+
+
+
+  private setupMessageListeners = () => {
+    this.messageListeners.set('keyExchange', this.handleKeyExchange);
+  }
+
+  private handleKeyExchange = (m:JsonData) => {
+    console.log("receivedKey through data channel")
   }
 
   private setupWSListeners = (): void => {
@@ -112,10 +125,39 @@ export class WebRTCManager {
   }
 
   private setupDataChannelListener = (channel: RTCDataChannel): void => {
-    channel.onopen = () => console.log('Data channel opened');
+    channel.onopen = () => this.handleDataChannelOpen;
     channel.onclose = () => console.log('Data channel closed');
     channel.onmessage = this.handleDataChannelMessage;
   }
+
+  private handleDataChannelOpen(channel:RTCDataChannel, event:Event) {
+    console.log('Data channel opened');
+    this.sendLocalPublicKey();
+  }
+
+  private ExchangeKeys() {
+    // eavesdropping risk ? 
+    //
+  }
+
+  private sendLocalPublicKey () {
+    if (!this.keyExchangeManager) {
+      throw new Error("Trying to send local public key over the channel keys when the keyExchangeManager is not initialized");
+    }
+    const myPublicKey = this.keyExchangeManager.getMyPublicKey();
+    const message = {
+      label: "PublicKeyExchange",
+      payload: {
+        publicKey: {
+          x: myPublicKey.x.toBigInt(),
+          y: myPublicKey.y.toBigInt(),
+        }
+    }
+    };
+    this.sendData(message);
+  }
+
+
 
   private handleDataChannelMessage = (event: MessageEvent): void => {
     try {
@@ -123,7 +165,14 @@ export class WebRTCManager {
       if (this.onMessageCallback) {
         this.onMessageCallback(jsonData);
       } else {
-        console.log("Received JSON data : ", jsonData);
+        if ('label' in jsonData) {
+          if (jsonData['label'] in this.messageListeners) {
+            let fn = this.messageListeners.get(jsonData['label']);
+            if (fn) {
+              fn(jsonData);
+            }
+          }
+        }
       }
     } catch (error) {
       console.error("Error parsing message:", error);
@@ -188,6 +237,8 @@ export class WebRTCManager {
   setOnMessageCallback = (callback: (data: JsonData) => void): void => {
     this.onMessageCallback = callback;
   }
+
+  
 
   sendData = (data: JsonData): void => {
     if (this.dataChannel?.readyState === "open") {

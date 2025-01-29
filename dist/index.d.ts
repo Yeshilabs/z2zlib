@@ -38,9 +38,13 @@ declare class WebRTCManager {
     private peerConnection;
     dataChannel: RTCDataChannel | null;
     private onMessageCallback;
+    private keyExchangeManager;
+    private messageListeners;
     isHost: boolean;
     constructor(socket: Socket, roomName: string, iceServers?: RTCConfiguration);
     init(): void;
+    private setupMessageListeners;
+    private handleKeyExchange;
     private setupWSListeners;
     private handleConnect;
     private handleRoomCreated;
@@ -48,6 +52,9 @@ declare class WebRTCManager {
     private initiateCall;
     private createPeerConnection;
     private setupDataChannelListener;
+    private handleDataChannelOpen;
+    private ExchangeKeys;
+    private sendLocalPublicKey;
     private handleDataChannelMessage;
     private handleOffer;
     private handleAnswer;

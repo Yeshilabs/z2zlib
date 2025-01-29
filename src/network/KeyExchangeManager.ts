@@ -38,7 +38,7 @@ export class KeyExchangeManager {
       let mBytes = Bytes43.fromString(m);
       let signature = Ecdsa.sign(mBytes.toBytes(), this.localPrivateKey.toBigInt());
 
-      // NOTE: we may want to return the toHex version
+      // NOTE: we may want to return the toHex version for transportation through the WebRTC channel 
       return signature;
 
     } else {
@@ -62,4 +62,13 @@ export class KeyExchangeManager {
     this.otherPublicKey = new ForeignCurve({ x: xAFF, y: yAFF });
     console.log("Registered other participant's public key which is", this.otherPublicKey.toBigint);
   }
+
+  getMyPublicKey() {
+    if (this.localPublicKey) {
+      return this.localPublicKey;
+    }
+    throw new Error("Trying to get local public key while it is not initialized");
+  }
+
+
 }
