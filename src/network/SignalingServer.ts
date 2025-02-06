@@ -1,34 +1,42 @@
+import { Server as HTTPServer } from 'http';
 import { Server, Socket } from "socket.io";
 import { RTCIceCandidate, SignalingEvents } from "../types/SignalingTypes";
 
-export class SignalingServer extends Server {
-    // Static property to hold the Server instance
+export class SignalingServer {
     private static _instance: Server | null = null;
+    private io: Server;
 
-    constructor(server: any) {
-        super(server); // Initialize the Server with the provided HTTP server
+    constructor(httpServer: HTTPServer) {
+        this.io = new Server(httpServer, {
+            cors: {
+                origin: "*",
+                methods: ["GET", "POST"]
+            }
+        });
+
         if (!SignalingServer._instance) {
-            SignalingServer._instance = this;
+            SignalingServer._instance = this.io;
         }
+
         this.setupListeners();
     }
+
     public static get io(): Server | null {
-        if (!SignalingServer._instance) {
-            throw new Error("SignalingServer has not been initialized.");
-        }
         return SignalingServer._instance;
     }
 
     private setupListeners(): void {
-        this.on("connection", (socket: Socket) => {
+        this.io.on("connection", (socket: Socket) => {
             console.log("User connected:", socket.id);
             this.setupSocketEvents(socket);
         });
     }
-    private setupSocketEvents(socket: Socket): void {
+
+
+ private setupSocketEvents(socket: Socket): void {
         socket.on("join", (roomName: string) => {
             console.log("User joined room:", roomName);
-            const room = this.sockets.adapter.rooms.get(roomName);
+            const room = this.io.sockets.adapter.rooms.get(roomName);
 
             if (!room) {
                 socket.join(roomName);
@@ -73,8 +81,9 @@ export class SignalingServer extends Server {
         });
     }
     public broadcastEvent(roomName: string, event: keyof SignalingEvents, data: any): void {
-        this.to(roomName).emit(event, data);
+        this.io.to(roomName).emit(event, data);
     }
 }
 
 export default SignalingServer;
+

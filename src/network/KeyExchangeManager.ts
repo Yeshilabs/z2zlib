@@ -60,7 +60,7 @@ export class KeyExchangeManager {
     let xAFF = Secp256k1.Scalar.from(x);
     let yAFF = Secp256k1.Scalar.from(y);
     this.otherPublicKey = new ForeignCurve({ x: xAFF, y: yAFF });
-    console.log("Registered other participant's public key which is", this.otherPublicKey.toBigint);
+    //console.log("Registered other participant's public key which is", this.otherPublicKey.toBigint());
   }
 
   getMyPublicKey() {

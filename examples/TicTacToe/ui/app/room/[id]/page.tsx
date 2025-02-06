@@ -8,40 +8,32 @@ import { JsonProof } from 'o1js';
 import { WebRTCManager } from 'z2zlib';
 import useSocket from '../../../hooks/useSocket';
 import TicTacToeBoard from '../../../components/TicTacToeBoard';
+export const dynamic = 'force-static';
 
 const Room = () => {
-  const { socketInitialized } = useSocket();
+  //const { socketInitialized } = useSocket();
   const params = useParams();
   const roomId = params?.id;
   const webRTCManagerRef = useRef<WebRTCManager | null>(null);
-  const [webRTCManager, setWebRtcManager] = useState<WebRTCManager | null>(null);
-  const rtcConnectionRef = useRef<RTCPeerConnection | null>(null);
   const socketRef = useRef<typeof Socket | null>(null);
-  const dataChannelRef = useRef<RTCDataChannel | null>(null);
-  const hostRef = useRef(false);
-  const receivedProof = useRef<JsonProof | null>(null);
   const [hasReceivedProof, setHasReceivedProof] = useState(false);
-  const [roomName, setRoomName] = useState(roomId)
-  const [isHost, setIsHost] = useState(false);
+  const [roomName, setRoomName] = useState(roomId);
 
   useEffect(() => {
-    console.log('Initializing socket connection...');
-    socketRef.current = io();
-    if (roomName && !webRTCManagerRef.current) {
-      webRTCManagerRef.current = new WebRTCManager(socketRef.current, roomName.toString());
-      webRTCManagerRef.current.init();
+    if (typeof window !== 'undefined') {  // Only run on client
+      console.log('Initializing socket connection...');
+      socketRef.current = io('http://localhost:3000');
+      if (roomName && !webRTCManagerRef.current) {
+        webRTCManagerRef.current = new WebRTCManager(socketRef.current, roomName.toString());
+        webRTCManagerRef.current.init();
+      }
     }
     return () => {
       webRTCManagerRef.current?.close();
     };
-  }, [socketInitialized, roomName]);
+  }, [roomName]);
 
-  useEffect(() => {
-    console.log("effecting");
-    setIsHost(webRTCManagerRef.current?.isHost!);
-  }, [webRTCManagerRef.current])
-
-  const sendProofViaDataChannel = async () => {
+   const sendProofViaDataChannel = async () => {
     if (webRTCManagerRef.current?.dataChannel?.readyState === 'open') {
       try {
         const jsonProof = await generateBaseCaseProof();
@@ -55,6 +47,10 @@ const Room = () => {
     }
   };
 
+  const printDataChannelState = () => {
+    console.log("Data channel state:", webRTCManagerRef.current?.dataChannel?.readyState);
+  }
+
   const onVerifyProof = () => {
     console.log("Verifying the received proof...");
     // Add verification logic here
@@ -63,8 +59,10 @@ const Room = () => {
   return (
     <div className="flex flex-col items-center space-y-4 bg-gray-50 p-4 rounded-lg shadow-sm">
       <h1 className="text-2xl font-semibold text-center">
-        Tic Tac Toe 
+        ZK Tic Tac Toe Example
       </h1>
+      <button onClick={printDataChannelState}>Print Data Channel State</button>
+
       <div className="flex space-x-4 mb-4">
         <button
           onClick={sendProofViaDataChannel}

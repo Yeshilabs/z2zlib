@@ -12,4 +12,4 @@ export type SignalingEvents = {
       offer: (offer: any, roomName: string) => void;
       answer: (answer: any, roomName: string) => void;
       leave: (roomName: string) => void;
-  };
+  }

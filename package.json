@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "description": "z2zlib - Zero-Knowledge State Channel Library",
   "main": "dist/index.js",
-  "module": "dist/index.mjs",
+  "module": "dist/index.js", 
   "types": "dist/index.d.ts",
   "type": "module",
   "exports": {
@@ -12,6 +12,12 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs",
       "default": "./dist/index.js"
+    },
+    "./server": {
+      "types": "./dist/server/index.d.ts",
+      "import": "./dist/server/index.js",
+      "require": "./dist/server/index.cjs",
+      "default": "./dist/server/index.js"
     }
   },
   "files": [

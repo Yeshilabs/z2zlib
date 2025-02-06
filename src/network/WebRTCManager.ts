@@ -1,20 +1,13 @@
 import { Socket } from 'socket.io-client';
-import { JsonProof } from 'o1js';
 import { KeyExchangeManager } from './KeyExchangeManager';
 
-export type JsonData = JsonProof | { [key: string]: any };
+export type JsonData = { [key: string]: any };
 
-export function isJsonProof(data: unknown): data is JsonProof {
-  return (
-    typeof data === 'object' &&
-    data !== null &&
-    'publicInput' in data &&
-    'publicOutput' in data &&
-    'maxProofsVerified' in data &&
-    'proof' in data
-  );
+
+const isBrowser = typeof window !== 'undefined';
+if (!isBrowser) {
+  throw new Error("WebRTCManager can only be used in a browser environment !");
 }
-
 export class WebRTCManager {
   private peerConnection: RTCPeerConnection | null = null;
   dataChannel: RTCDataChannel | null = null;
@@ -22,7 +15,10 @@ export class WebRTCManager {
   private keyExchangeManager: KeyExchangeManager | null;
   private messageListeners: Map<string, (message:JsonData) => void> = new Map();
 
+  
   isHost: boolean = false;
+
+
 
   constructor(
     private socket: Socket,
@@ -132,7 +128,7 @@ export class WebRTCManager {
 
   private handleDataChannelOpen(channel:RTCDataChannel, event:Event) {
     console.log('Data channel opened');
-    this.sendLocalPublicKey();
+    //this.sendLocalPublicKey();
   }
 
   private ExchangeKeys() {
@@ -160,6 +156,7 @@ export class WebRTCManager {
 
 
   private handleDataChannelMessage = (event: MessageEvent): void => {
+    console.log("Received message on data channel");
     try {
       const jsonData = JSON.parse(event.data);
       if (this.onMessageCallback) {

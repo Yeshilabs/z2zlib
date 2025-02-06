@@ -1,6 +1,6 @@
-import { Server } from 'socket.io';
+import { Server } from 'http';
+import { Server as Server$1 } from 'socket.io';
 import { Socket } from 'socket.io-client';
-import { JsonProof } from 'o1js';
 
 type RTCIceCandidate = {
     candidate: string;
@@ -16,21 +16,21 @@ type SignalingEvents = {
       offer: (offer: any, roomName: string) => void;
       answer: (answer: any, roomName: string) => void;
       leave: (roomName: string) => void;
-  };
+  }
 
-declare class SignalingServer extends Server {
+declare class SignalingServer {
     private static _instance;
-    constructor(server: any);
-    static get io(): Server | null;
+    private io;
+    constructor(httpServer: Server);
+    static get io(): Server$1 | null;
     private setupListeners;
     private setupSocketEvents;
     broadcastEvent(roomName: string, event: keyof SignalingEvents, data: any): void;
 }
 
-type JsonData = JsonProof | {
+type JsonData = {
     [key: string]: any;
 };
-declare function isJsonProof(data: unknown): data is JsonProof;
 declare class WebRTCManager {
     private socket;
     private roomName;
@@ -65,4 +65,4 @@ declare class WebRTCManager {
     close: () => void;
 }
 
-export { type JsonData, type RTCIceCandidate, type SignalingEvents, SignalingServer, WebRTCManager, isJsonProof };
+export { SignalingServer, WebRTCManager };
