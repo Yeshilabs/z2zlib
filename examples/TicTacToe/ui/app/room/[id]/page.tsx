@@ -37,7 +37,7 @@ const Room = () => {
     if (webRTCManagerRef.current?.dataChannel?.readyState === 'open') {
       try {
         const jsonProof = await generateBaseCaseProof();
-        webRTCManagerRef.current.sendData(jsonProof);
+        webRTCManagerRef.current.sendData('dummyProof', jsonProof);
         console.log("Proof sent:", jsonProof);
       } catch (error) {
         console.error("Error generating proof:", error);
@@ -61,7 +61,8 @@ const Room = () => {
       <h1 className="text-2xl font-semibold text-center">
         ZK Tic Tac Toe Example
       </h1>
-      <button onClick={printDataChannelState}>Print Data Channel State</button>
+      <button onClick={printDataChannelState}
+       className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Print Data Channel State</button>
 
       <div className="flex space-x-4 mb-4">
         <button
