@@ -13,9 +13,9 @@ export class WebRTCManager {
   dataChannel: RTCDataChannel | null = null;
   private onMessageCallback: ((data: JsonData) => void) | null = null;
   private keyExchangeManager: KeyExchangeManager | null;
-  private messageListeners: Map<string, (message:JsonData) => void> = new Map();
+  private messageListeners: Map<string, (message: JsonData) => void> = new Map();
 
-  
+
   isHost: boolean = false;
 
 
@@ -41,11 +41,41 @@ export class WebRTCManager {
 
 
   private setupMessageListeners = () => {
-    this.messageListeners.set('keyExchange', this.handleKeyExchange);
+    this.messageListeners.set('PublicKeyExchange', this.handleKeyExchange);
+    this.messageListeners.set('SignedData', this.handleSignedData);
   }
 
-  private handleKeyExchange = (m:JsonData) => {
-    console.log("receivedKey through data channel")
+
+  private handleSignedData = (payload: any) => {
+    console.log("Received signed data payload:", payload);
+    const { message, signature } = payload;
+    console.log("verifying message:", message);
+    const isValid = this.keyExchangeManager?.verifySignature(signature, JSON.stringify(message));
+    console.log("Signature is valid:", isValid);
+    if (isValid) {
+      const { label, payload } = message;
+      const handler = this.messageListeners.get(label);
+      if (handler) {
+        handler(payload);
+      }
+    }
+  };
+
+
+
+  private handleKeyExchange = (payload: any) => {
+    console.log("Received key exchange payload:", payload);
+    if (payload.publicKey) {
+      const { x, y } = payload.publicKey;
+      console.log("Received peer's public key - x:", x, "y:", y);
+      if (this.keyExchangeManager) {
+        this.keyExchangeManager.setPeerPublicKey(x, y);
+      } else {
+        console.log("KeyExchangeManager not initialized");
+      }
+    } else {
+      console.log("Received key exchange payload but no public key");
+    }
   }
 
   private setupWSListeners = (): void => {
@@ -121,58 +151,52 @@ export class WebRTCManager {
   }
 
   private setupDataChannelListener = (channel: RTCDataChannel): void => {
-    channel.onopen = () => this.handleDataChannelOpen;
+    channel.onopen = (event) => {
+      console.log('Data channel opened');
+      this.sendLocalPublicKey();
+    };
     channel.onclose = () => console.log('Data channel closed');
     channel.onmessage = this.handleDataChannelMessage;
   }
 
-  private handleDataChannelOpen(channel:RTCDataChannel, event:Event) {
-    console.log('Data channel opened');
-    //this.sendLocalPublicKey();
-  }
-
-  private ExchangeKeys() {
-    // eavesdropping risk ? 
-    //
-  }
-
-  private sendLocalPublicKey () {
+  private sendLocalPublicKey() {
+    console.log("sending public key");
     if (!this.keyExchangeManager) {
       throw new Error("Trying to send local public key over the channel keys when the keyExchangeManager is not initialized");
     }
     const myPublicKey = this.keyExchangeManager.getMyPublicKey();
+    console.log("my public key:", myPublicKey);
     const message = {
-      label: "PublicKeyExchange",
-      payload: {
-        publicKey: {
-          x: myPublicKey.x.toBigInt(),
-          y: myPublicKey.y.toBigInt(),
-        }
-    }
+      publicKey: {
+        x: myPublicKey.x,
+        y: myPublicKey.y,
+      }
     };
-    this.sendData(message);
+    this.sendData('PublicKeyExchange', message);
   }
 
 
 
   private handleDataChannelMessage = (event: MessageEvent): void => {
-    console.log("Received message on data channel");
     try {
-      const jsonData = JSON.parse(event.data);
-      if (this.onMessageCallback) {
-        this.onMessageCallback(jsonData);
+      const data = JSON.parse(event.data);
+
+      // Check if message has a label
+      if (!data.label) {
+        console.log("Received unlabeled message:", data);
+        return;
+      }
+
+      // Get the handler for this label
+      const handler = this.messageListeners.get(data.label);
+      if (handler) {
+        console.log(`Handling message with label: ${data.label}`);
+        handler(data.payload);
       } else {
-        if ('label' in jsonData) {
-          if (jsonData['label'] in this.messageListeners) {
-            let fn = this.messageListeners.get(jsonData['label']);
-            if (fn) {
-              fn(jsonData);
-            }
-          }
-        }
+        console.log(`No handler registered for message label: ${data.label}`);
       }
     } catch (error) {
-      console.error("Error parsing message:", error);
+      console.error("Error handling data channel message:", error);
     }
   }
 
@@ -235,14 +259,36 @@ export class WebRTCManager {
     this.onMessageCallback = callback;
   }
 
-  
 
-  sendData = (data: JsonData): void => {
+  sendSignedData = (label: string, data: JsonData): void => {
+    if (!this.keyExchangeManager) throw new Error("KeyExchangeManager not initialized");
+    const message = {
+      label: label,
+      payload: data
+    }
+    const { r, s } = this.keyExchangeManager.signMessage(JSON.stringify(message));
+    const signedMessage = {
+      message: message,
+      signature: {
+        r: r,
+        s: s
+      }
+    };
+    console.log("Sending signed message:", signedMessage);
+
+    this.sendData('SignedData', signedMessage);
+  }
+
+  sendData = (label: string, data: JsonData): void => {
     if (this.dataChannel?.readyState === "open") {
-      this.dataChannel.send(JSON.stringify(data));
+      const message = {
+        label: label,
+        payload: data
+      };
+      this.dataChannel.send(JSON.stringify(message));
     } else {
-      console.log("Data channel is not open - state :", this.dataChannel?.readyState);
-      console.error("Data channel is not open - state :", this.dataChannel?.readyState);
+      console.log("Data channel is not open - state:", this.dataChannel?.readyState);
+      console.error("Data channel is not open - state:", this.dataChannel?.readyState);
     }
   }
 

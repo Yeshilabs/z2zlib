@@ -1,39 +1,84 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
-import io, { Socket } from 'socket.io-client';
-import { generateBaseCaseProof } from '../../ZK/prove';
-import { verifyProof } from '../../ZK/verify';
-import { JsonProof } from 'o1js';
+import io from 'socket.io-client';
 import { WebRTCManager } from 'z2zlib';
-import useSocket from '../../../hooks/useSocket';
+import { TicTacToeState, TicTacToeTransition, TicTacToeMove } from '../../../logic/TicTacToeState';
+import { StateManager } from 'z2zlib';
 import TicTacToeBoard from '../../../components/TicTacToeBoard';
+import { generateBaseCaseProof } from '../../ZK/prove';
 export const dynamic = 'force-static';
 
 const Room = () => {
-  //const { socketInitialized } = useSocket();
   const params = useParams();
   const roomId = params?.id;
   const webRTCManagerRef = useRef<WebRTCManager | null>(null);
-  const socketRef = useRef<typeof Socket | null>(null);
-  const [hasReceivedProof, setHasReceivedProof] = useState(false);
-  const [roomName, setRoomName] = useState(roomId);
+  const stateManagerRef = useRef<StateManager<TicTacToeState, TicTacToeMove> | null>(null);
+  const [gameState, setGameState] = useState<TicTacToeState>(new TicTacToeState());
+  const hasReceivedProof = false;
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {  // Only run on client
-      console.log('Initializing socket connection...');
-      socketRef.current = io('http://localhost:3000');
-      if (roomName && !webRTCManagerRef.current) {
-        webRTCManagerRef.current = new WebRTCManager(socketRef.current, roomName.toString());
-        webRTCManagerRef.current.init();
-      }
+    if (typeof window !== 'undefined' && roomId) {
+      const socket = io('http://localhost:3000');
+      webRTCManagerRef.current = new WebRTCManager(socket, roomId.toString());
+
+      // Initialize state manager
+      stateManagerRef.current = new StateManager(
+        new TicTacToeState(),
+        new TicTacToeTransition()
+      );
+
+      // Subscribe to state changes
+      stateManagerRef.current.onStateUpdate((state: any) => {
+        setGameState(state);
+      });
+
+      // Handle game moves received over WebRTC
+      webRTCManagerRef.current.setOnMessageCallback((data:any) => {
+        console.log('Received data:', data);
+        if (data.type === 'GAME_MOVE' && data.move) {
+          console.log('Applying move:', data.move);
+          stateManagerRef.current?.applyMove(data.move);
+        }
+      });
+
+      webRTCManagerRef.current.init();
     }
+
     return () => {
       webRTCManagerRef.current?.close();
     };
-  }, [roomName]);
+  }, [roomId]);
 
-   const sendProofViaDataChannel = async () => {
+  const handleCellClick = (position: number) => {
+    if (!webRTCManagerRef.current || !stateManagerRef.current) return;
+
+    const move: TicTacToeMove = {
+      position,
+      player: webRTCManagerRef.current.isHost ? 1 : 2
+    };
+
+    try {
+      // Apply move locally
+      stateManagerRef.current.applyMove(move);
+
+      // Send move to peer with correct message format
+      webRTCManagerRef.current.sendData('GAME_MOVE', { type: 'GAME_MOVE', move });
+    } catch (error) {
+      console.error('Invalid move:', error);
+    }
+  };
+
+  const printDataChannelState = () => {
+    console.log("Data channel state:", webRTCManagerRef.current?.dataChannel?.readyState);
+  }
+
+
+  const onVerifyProof = () => {
+    console.log("Verifying the received proof...");
+    // Add verification logic here
+  };
+  const sendProofViaDataChannel = async () => {
     if (webRTCManagerRef.current?.dataChannel?.readyState === 'open') {
       try {
         const jsonProof = await generateBaseCaseProof();
@@ -47,13 +92,12 @@ const Room = () => {
     }
   };
 
-  const printDataChannelState = () => {
-    console.log("Data channel state:", webRTCManagerRef.current?.dataChannel?.readyState);
-  }
-
-  const onVerifyProof = () => {
-    console.log("Verifying the received proof...");
-    // Add verification logic here
+  const sendSignedData = () => {
+    if (webRTCManagerRef.current) {
+      webRTCManagerRef.current.sendSignedData('dummyDataLabel', {
+        message: 'Hello, world!',
+      });
+    }
   };
 
   return (
@@ -61,15 +105,18 @@ const Room = () => {
       <h1 className="text-2xl font-semibold text-center">
         ZK Tic Tac Toe Example
       </h1>
-      <button onClick={printDataChannelState}
-       className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Print Data Channel State</button>
-
       <div className="flex space-x-4 mb-4">
         <button
           onClick={sendProofViaDataChannel}
           className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
         >
           Send Proof
+        </button>
+        <button
+          onClick={sendSignedData}
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+        >
+          Send Signed Data
         </button>
         <button
           onClick={onVerifyProof}
@@ -82,7 +129,18 @@ const Room = () => {
           Verify Proof
         </button>
       </div>
-      <TicTacToeBoard />
+      <TicTacToeBoard
+        board={gameState.board}
+        onCellClick={handleCellClick}
+        isMyTurn={
+          webRTCManagerRef.current?.isHost
+            ? gameState.currentPlayer === 1
+            : gameState.currentPlayer === 2
+        }
+        currentPlayer={gameState.currentPlayer}
+        winner={gameState.winner}
+      />
+      {gameState.winner && <div>Winner: Player {gameState.winner}</div>}
     </div>
   );
 };

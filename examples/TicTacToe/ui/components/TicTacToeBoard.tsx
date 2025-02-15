@@ -1,54 +1,40 @@
-import React, { useState } from 'react';
-import TicTacToeCell from './TicTacToeCell';
-import { initialGameState, checkWinner, isDraw } from '../utils/TicTacToeLogic';
+import React from 'react';
 import styles from '../styles/TicTacToe.module.css';
 
-const TicTacToeBoard: React.FC = () => {
-  const [state, setState] = useState(initialGameState);
+interface TicTacToeBoardProps {
+  board: (0 | 1 | 2)[];
+  onCellClick: (position: number) => void;
+  isMyTurn: boolean;
+  currentPlayer: number;
+  winner: number | null;
+}
 
-  const handleCellClick = (index: number) => {
-    if (state.board[index] || state.winner) return;
-
-    const newBoard = [...state.board];
-    newBoard[index] = state.currentPlayer;
-
-    const winner = checkWinner(newBoard);
-    const draw = isDraw(newBoard);
-
-    setState({
-      board: newBoard,
-      currentPlayer: state.currentPlayer === 1 ? 2 : 1,
-      winner,
-      isDraw: draw,
-    });
-  };
-
-  const restartGame = () => {
-    setState(initialGameState);
-  };
-
+const TicTacToeBoard: React.FC<TicTacToeBoardProps> = ({ 
+  board, 
+  onCellClick, 
+  isMyTurn,
+  currentPlayer,
+  winner 
+}) => {
   return (
     <div className={styles.game}>
       <div className={styles.board}>
-        {state.board.map((cell, index) => (
-          <TicTacToeCell
+        {board.map((cell, index) => (
+          <button
             key={index}
-            value={cell}
-            onClick={() => handleCellClick(index)}
-            disabled={!!state.winner || state.isDraw}
-          />
+            onClick={() => isMyTurn && onCellClick(index)}
+            disabled={!isMyTurn || cell !== 0 || winner !== null}
+            className="w-20 h-20 bg-white border-2 border-gray-300 text-2xl font-bold"
+          >
+            {cell === 1 ? 'X' : cell === 2 ? 'O' : ''}
+          </button>
         ))}
       </div>
       <p className={styles.status}>
-        {state.winner
-          ? `Player ${state.winner} wins!`
-          : state.isDraw
-          ? 'It\'s a draw!'
-          : `Player ${state.currentPlayer}'s turn`}
+        {winner 
+          ? `Player ${winner} wins!` 
+          : `Player ${currentPlayer}'s turn`}
       </p>
-      <button className={styles.restart} onClick={restartGame}>
-        Restart
-      </button>
     </div>
   );
 };
