@@ -4,15 +4,17 @@ import { Field, Poseidon } from 'o1js';
 type Cell = 0 | 1 | 2; // Empty, X, O
 
 export class TicTacToeState extends BaseState {
+
     static deserialize(serialized: string): TicTacToeState {
-        const { board, currentPlayer, winner } = JSON.parse(serialized);
+        const { board, currentPlayer, winner, id} = JSON.parse(serialized);
         return new TicTacToeState(board, currentPlayer, winner);
     }
 
     constructor(
         public board: Cell[] = Array(9).fill(0),
-        public currentPlayer: 1 | 2 = 1,
-        public winner: number | null = null
+        public currentPlayer: '1' | '2' = '1',
+        public winner: number | null = null,
+        //public id: bigint = BigInt(0)
     ) {
         super();
     }
@@ -44,7 +46,7 @@ export class TicTacToeState extends BaseState {
 
 export interface TicTacToeMove {
     position: number; // 0-8
-    player: 1 | 2;
+    player: '1' | '2';
 }
 
 export class TicTacToeTransition implements StateTransition<TicTacToeState, TicTacToeMove> {
@@ -54,27 +56,48 @@ export class TicTacToeTransition implements StateTransition<TicTacToeState, TicT
         }
 
         const newBoard = [...state.board];
-        newBoard[move.position] = move.player;
+        newBoard[move.position] = move.player === '1' ? 1 : 2;
 
         return new TicTacToeState(
             newBoard,
-            state.currentPlayer === 1 ? 2 : 1,
+            state.currentPlayer === '1' ? '2' : '1',
             this.checkWinner(newBoard)
         );
     }
 
     isValid(state: TicTacToeState, _nextState: TicTacToeState, move: TicTacToeMove): boolean {
         // Check if position is valid
-        if (move.position < 0 || move.position > 8) return false;
+        if (move.position < 0 || move.position > 8) {
+            console.error("Invalid move position:", move.position);
+            return false;
+        }
+
         
         // Check if position is empty
-        if (state.board[move.position] !== 0) return false;
+        if (state.board[move.position] !== 0) {
+            console.error("Invalid move position:", move.position);
+            return false;
+        }
         
         // Check if it's the player's turn
-        if (move.player !== state.currentPlayer) return false;
+        if (move.player !== state.currentPlayer) {
+            console.error("Invalid move player:", move.player);
+            return false;
+        }
+
+        if (_nextState) {
+            //check that the next state is correctly updated
+            if (_nextState.board[move.position].toString() !== move.player) {
+                console.error("Next state is not correctly updated", _nextState.board[move.position].toString(), move.player);
+                return false;
+            }
+        }
         
         // Check if game is not already won
-        if (state.winner !== null) return false;
+        if (state.winner !== null) {
+            console.error("Game already won");
+            return false;
+        }
 
         return true;
     }

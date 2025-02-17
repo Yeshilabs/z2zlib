@@ -1,5 +1,6 @@
 import { Field } from 'o1js';
 import { State, StateTransition } from './State';
+import { WebRTCManager } from '../network/WebRTCManager';
 
 // Main StateManager class
 export class StateManager<S extends State, M> {
@@ -24,6 +25,11 @@ export class StateManager<S extends State, M> {
         this.onStateChange?.(nextState);
         
         return nextState;
+    }
+
+    updateState(state: S): void {
+        this.currentState = state;
+        this.onStateChange?.(state);
     }
 
     // Get current state
@@ -56,6 +62,8 @@ export class StateManager<S extends State, M> {
     //     // Use a ZK library to generate a proof
     //     return {}; // TODO
     // }
+
+
 
     // Verify a zero-knowledge proof
     async verifyProof(proof: any): Promise<boolean> {

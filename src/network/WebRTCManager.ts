@@ -1,6 +1,7 @@
 import { Socket } from 'socket.io-client';
 import { KeyExchangeManager } from './KeyExchangeManager';
-
+import { StateManager } from '../state/StateManager';
+import { BaseState } from '../state/State';
 export type JsonData = { [key: string]: any };
 
 
@@ -15,7 +16,6 @@ export class WebRTCManager {
   private keyExchangeManager: KeyExchangeManager | null;
   private messageListeners: Map<string, (message: JsonData) => void> = new Map();
 
-
   isHost: boolean = false;
 
 
@@ -23,11 +23,15 @@ export class WebRTCManager {
   constructor(
     private socket: Socket,
     private roomName: string,
+    private stateManager: StateManager<any, any>,
+    private onDataChannelOpenCallback: (() => void) | null = null,
     private iceServers: RTCConfiguration = {
       iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
     }
   ) {
     this.keyExchangeManager = new KeyExchangeManager();
+    this.stateManager = stateManager;
+    this.onDataChannelOpenCallback = onDataChannelOpenCallback;
   }
 
 
@@ -39,12 +43,73 @@ export class WebRTCManager {
 
 
 
+  private setupStateChannel = () => {
+    if (this.isHost) {
+      console.log("Sending initial state");
+      this.sendSignedData('InitState', {state: this.stateManager.serialize()})
+    } else {
+      console.log(" couldn't setup state channel because isHost = ", this.isHost);
+    }
+  }
 
   private setupMessageListeners = () => {
     this.messageListeners.set('PublicKeyExchange', this.handleKeyExchange);
     this.messageListeners.set('SignedData', this.handleSignedData);
+    this.messageListeners.set('InitState', this.handleInitState);
+    this.messageListeners.set('InitStateAck', this.handleInitStateAck);
+    this.messageListeners.set('StateUpdate', this.handleStateUpdate);
   }
 
+  private handleStateUpdate = (payload: any) => {
+    console.log("Received state update:", payload);
+    
+    try {
+        if (!payload.state || !payload.move) {
+            console.error("Invalid state update payload:", payload);
+            return;
+        }
+
+        // Deserialize the received state using the state manager's current state type
+        const receivedState = this.stateManager.getState().constructor.deserialize(
+            JSON.stringify(payload.state)
+        );
+        const move = JSON.parse(JSON.stringify(payload.move));
+        
+        console.log("Current state:", this.stateManager.getState());
+        const nextState = this.stateManager.applyMove(move);
+        if (!nextState.equals(receivedState)) {
+            console.error("State mismatch after move", nextState, receivedState);
+        }
+        console.log("Applied move:", move);
+        console.log("New state:", this.stateManager.getState());
+    } catch (error) {
+        console.error("Error handling state update:", error);
+    }
+  }
+
+  private handleInitStateAck = (payload: any) => {
+    if (this.isHost) {
+      console.log("Received initial state ack:", payload);
+    } else {
+      throw new Error("Received initial state ack from host when it should be the other way around");
+    }
+  }
+
+  private handleInitState = (payload: any) => {
+    console.log("Received initial state:", payload);
+    const isValid = this.isInitStateValid(payload);
+    if (isValid) {
+      console.log("Initial state is valid");
+      this.sendSignedData('InitStateAck', payload)
+    } else {
+      console.log("Initial state is invalid");
+    }
+  }
+
+  private isInitStateValid = (payload: any) => {
+    console.log("verifying initial state validity");
+    return true;
+  }
 
   private handleSignedData = (payload: any) => {
     console.log("Received signed data payload:", payload);
@@ -154,6 +219,8 @@ export class WebRTCManager {
     channel.onopen = (event) => {
       console.log('Data channel opened');
       this.sendLocalPublicKey();
+      this.setupStateChannel();
+      this.onDataChannelOpenCallback?.();
     };
     channel.onclose = () => console.log('Data channel closed');
     channel.onmessage = this.handleDataChannelMessage;
@@ -266,7 +333,12 @@ export class WebRTCManager {
       label: label,
       payload: data
     }
-    const { r, s } = this.keyExchangeManager.signMessage(JSON.stringify(message));
+    const { r, s } = this.keyExchangeManager.signMessage(JSON.stringify(message, (key, value) =>
+      typeof value === 'bigint'
+          ? value.toString()
+          : value // return everything else unchanged
+    ));
+
     const signedMessage = {
       message: message,
       signature: {
@@ -285,7 +357,11 @@ export class WebRTCManager {
         label: label,
         payload: data
       };
-      this.dataChannel.send(JSON.stringify(message));
+      this.dataChannel.send(JSON.stringify(message, (key, value) =>
+        typeof value === 'bigint'
+            ? value.toString()
+            : value // return everything else unchanged
+      ));
     } else {
       console.log("Data channel is not open - state:", this.dataChannel?.readyState);
       console.error("Data channel is not open - state:", this.dataChannel?.readyState);

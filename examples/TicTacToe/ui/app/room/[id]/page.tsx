@@ -16,25 +16,28 @@ const Room = () => {
   const stateManagerRef = useRef<StateManager<TicTacToeState, TicTacToeMove> | null>(null);
   const [gameState, setGameState] = useState<TicTacToeState>(new TicTacToeState());
   const hasReceivedProof = false;
-
+  const [isHost, setIsHost] = useState<boolean>(false);
   useEffect(() => {
     if (typeof window !== 'undefined' && roomId) {
-      const socket = io('http://localhost:3000');
-      webRTCManagerRef.current = new WebRTCManager(socket, roomId.toString());
+      //Initialize state manager
 
-      // Initialize state manager
       stateManagerRef.current = new StateManager(
         new TicTacToeState(),
-        new TicTacToeTransition()
+        new TicTacToeTransition(),
       );
-
       // Subscribe to state changes
       stateManagerRef.current.onStateUpdate((state: any) => {
         setGameState(state);
       });
+      const socket = io('http://localhost:3000');
+
+
+      webRTCManagerRef.current = new WebRTCManager(socket, roomId.toString(), stateManagerRef.current, () => {setIsHost(webRTCManagerRef.current?.isHost || false)});
+
+
 
       // Handle game moves received over WebRTC
-      webRTCManagerRef.current.setOnMessageCallback((data:any) => {
+      webRTCManagerRef.current.setOnMessageCallback((data: any) => {
         console.log('Received data:', data);
         if (data.type === 'GAME_MOVE' && data.move) {
           console.log('Applying move:', data.move);
@@ -55,7 +58,7 @@ const Room = () => {
 
     const move: TicTacToeMove = {
       position,
-      player: webRTCManagerRef.current.isHost ? 1 : 2
+      player: webRTCManagerRef.current.isHost ? '1' : '2',
     };
 
     try {
@@ -100,49 +103,57 @@ const Room = () => {
     }
   };
 
-  return (
-    <div className="flex flex-col items-center space-y-4 bg-gray-50 p-4 rounded-lg shadow-sm">
-      <h1 className="text-2xl font-semibold text-center">
-        ZK Tic Tac Toe Example
-      </h1>
-      <div className="flex space-x-4 mb-4">
-        <button
-          onClick={sendProofViaDataChannel}
-          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-        >
-          Send Proof
-        </button>
-        <button
-          onClick={sendSignedData}
-          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-        >
-          Send Signed Data
-        </button>
-        <button
-          onClick={onVerifyProof}
-          disabled={!hasReceivedProof}
-          className={`px-4 py-2 rounded ${hasReceivedProof
-            ? 'bg-green-500 text-white hover:bg-green-600'
-            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-            }`}
-        >
-          Verify Proof
-        </button>
-      </div>
-      <TicTacToeBoard
-        board={gameState.board}
-        onCellClick={handleCellClick}
-        isMyTurn={
-          webRTCManagerRef.current?.isHost
-            ? gameState.currentPlayer === 1
-            : gameState.currentPlayer === 2
-        }
-        currentPlayer={gameState.currentPlayer}
-        winner={gameState.winner}
-      />
-      {gameState.winner && <div>Winner: Player {gameState.winner}</div>}
-    </div>
-  );
-};
+  const sendStateUpdate = () => {
+    if (webRTCManagerRef.current && stateManagerRef.current) {
+        let player: '1' | '2' = webRTCManagerRef.current.isHost ? '1' : '2';
+        let move: TicTacToeMove = {
+            position: 0,
+            player: player
+        };
+        let newState = stateManagerRef.current.applyMove(move);
 
-export default Room;
+
+        webRTCManagerRef.current.sendSignedData('StateUpdate', {state: newState, move: move});
+    }
+  };
+
+    return (
+      <div className="flex flex-col items-center space-y-4 bg-gray-50 p-4 rounded-lg shadow-sm">
+        <h1 className="text-2xl font-semibold text-center">
+          ZK Tic Tac Toe
+        </h1>
+        
+        <TicTacToeBoard
+          board={gameState.board}
+          onCellClick={(position) => {
+            if (webRTCManagerRef.current && stateManagerRef.current) {
+              const player = isHost ? '1' : '2';
+              const move = { position, player } as TicTacToeMove;
+              const newState = stateManagerRef.current.applyMove(move);
+              webRTCManagerRef.current.sendSignedData('StateUpdate', {
+                state: newState,
+                move: move
+              });
+            }
+          }}
+          isMyTurn={
+            isHost
+              ? gameState.currentPlayer === '1'
+              : gameState.currentPlayer === '2'
+          }
+          currentPlayer={gameState.currentPlayer}
+          winner={gameState.winner}
+          isHost={isHost}
+        />
+
+        <div className="mt-8 p-4 bg-white rounded shadow">
+          <h2 className="text-lg font-semibold mb-2">Debug Info</h2>
+          <pre className="text-sm bg-gray-50 p-2 rounded">
+            {JSON.stringify(gameState, null, 2)}
+          </pre>
+        </div>
+      </div>
+    );
+  };
+
+  export default Room;

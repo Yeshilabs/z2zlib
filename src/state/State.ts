@@ -6,6 +6,7 @@ export interface StateConstructor<T extends State> {
 }
 
 export interface State {
+    //id: bigint;
     // Get a hash representation of the state for on-chain use
     toFields(): Field[];
     
@@ -14,6 +15,9 @@ export interface State {
     
     // Serialize the state for transmission
     serialize(): string;
+
+    // Checks if the state is equal to another state
+    equals(other: State): boolean;
     
     // Get a human-readable string representation
     toString(): string;
@@ -36,10 +40,16 @@ export interface StateTransition<S extends State, M> {
 
 // Base class for implementing game states
 export abstract class BaseState implements State {
+    //abstract id: bigint;
+
     abstract toFields(): Field[];
     
     abstract hash(): Field;
     
+    equals(other: State): boolean {
+        return this.hash().equals(other.hash()).toBoolean();
+    }
+
     abstract serialize(): string;
     
     abstract toString(): string;
