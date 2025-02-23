@@ -6,7 +6,7 @@ import { WebRTCManager } from 'z2zlib';
 import { TicTacToeState, TicTacToeTransition, TicTacToeMove } from '../../../logic/TicTacToeState';
 import { StateManager } from 'z2zlib';
 import TicTacToeBoard from '../../../components/TicTacToeBoard';
-import { generateBaseCaseProof } from '../../ZK/prove';
+// import { generateBaseCaseProof } from '../../ZK/prove';
 export const dynamic = 'force-static';
 
 const Room = () => {
@@ -37,13 +37,13 @@ const Room = () => {
 
 
       // Handle game moves received over WebRTC
-      webRTCManagerRef.current.setOnMessageCallback((data: any) => {
-        console.log('Received data:', data);
-        if (data.type === 'GAME_MOVE' && data.move) {
-          console.log('Applying move:', data.move);
-          stateManagerRef.current?.applyMove(data.move);
-        }
-      });
+      // webRTCManagerRef.current.setOnMessageCallback((data: any) => {
+      //   console.log('Received data:', data);
+      //   if (data.type === 'GAME_MOVE' && data.move) {
+      //     console.log('Applying move:', data.move);
+      //     stateManagerRef.current?.applyMove(data.move);
+      //   }
+      // });
 
       webRTCManagerRef.current.init();
     }
@@ -81,19 +81,19 @@ const Room = () => {
     console.log("Verifying the received proof...");
     // Add verification logic here
   };
-  const sendProofViaDataChannel = async () => {
-    if (webRTCManagerRef.current?.dataChannel?.readyState === 'open') {
-      try {
-        const jsonProof = await generateBaseCaseProof();
-        webRTCManagerRef.current.sendData('dummyProof', jsonProof);
-        console.log("Proof sent:", jsonProof);
-      } catch (error) {
-        console.error("Error generating proof:", error);
-      }
-    } else {
-      console.log("Data channel is not open");
-    }
-  };
+  // const sendProofViaDataChannel = async () => {
+  //   if (webRTCManagerRef.current?.dataChannel?.readyState === 'open') {
+  //     try {
+  //       // const jsonProof = await generateBaseCaseProof();
+  //       webRTCManagerRef.current.sendData('dummyProof', jsonProof);
+  //       console.log("Proof sent:", jsonProof);
+  //     } catch (error) {
+  //       console.error("Error generating proof:", error);
+  //     }
+  //   } else {
+  //     console.log("Data channel is not open");
+  //   }
+  // };
 
   const sendSignedData = () => {
     if (webRTCManagerRef.current) {
@@ -122,7 +122,7 @@ const Room = () => {
         <h1 className="text-2xl font-semibold text-center">
           ZK Tic Tac Toe
         </h1>
-        
+        {/* <button onClick={generateBaseCaseProof} className='bg-blue-500 text-white p-2 rounded-md'>Generate Base Case Proof</button> */}
         <TicTacToeBoard
           board={gameState.board}
           onCellClick={(position) => {

@@ -12,7 +12,7 @@ class Bytes64 extends Bytes(64) { }
 class Bytes512 extends Bytes(512) { }
 
 
-export class KeyExchangeManager {
+export class ECDSACryptoManager {
   private localPublicKey: ForeignCurve | null = null;
   private localPrivateKey: AlmostForeignField | null = null;
   private otherPublicKey: ForeignCurve | null = null;

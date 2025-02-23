@@ -1,5 +1,5 @@
-import { State, StateTransition, BaseState, StateConstructor } from 'z2zlib';
-import { Field, Poseidon } from 'o1js';
+import {StateTransition, BaseState, BaseTransition} from 'z2zlib';
+import { Field, Poseidon, Bool } from 'o1js';
 
 type Cell = 0 | 1 | 2; // Empty, X, O
 
@@ -42,6 +42,26 @@ export class TicTacToeState extends BaseState {
     toString(): string {
         return `Board: ${this.board.join(',')}, Player: ${this.currentPlayer}, Winner: ${this.winner}`;
     }
+
+    sizeInFields(): number {
+        return 11; // 9 for board + 1 for currentPlayer + 1 for winner
+    }
+
+    fromFields(fields: Field[]): TicTacToeState {
+        return new TicTacToeState(
+            fields.slice(0, 9).map(f => Number(f.toBigInt()) as Cell),
+            fields[9].toBigInt() === BigInt(1) ? '1' : '2',
+            Number(fields[10].toBigInt()) || null
+        );
+    }
+
+    check(value: TicTacToeState): void {
+        // Verify board values are valid (0, 1, or 2)
+        value.board.forEach((cell, i) => {
+            Field(cell).assertLessThanOrEqual(Field(2));
+            Field(cell).assertGreaterThanOrEqual(Field(0));
+        });
+    }
 }
 
 export interface TicTacToeMove {
@@ -49,7 +69,21 @@ export interface TicTacToeMove {
     player: '1' | '2';
 }
 
-export class TicTacToeTransition implements StateTransition<TicTacToeState, TicTacToeMove> {
+export class TicTacToeTransition extends BaseTransition<TicTacToeState, TicTacToeMove> {
+    toFields(): Field[] {
+        return [];
+    }
+
+    sizeInFields(): number {
+        return 0;
+    }
+
+    fromFields(fields: Field[]): StateTransition<TicTacToeState, TicTacToeMove> {
+        return this;
+    }
+
+    check(_value: StateTransition<TicTacToeState, TicTacToeMove>): void {}
+
     apply(state: TicTacToeState, move: TicTacToeMove): TicTacToeState {
         if (!this.isValid(state, null as any, move)) {
             throw new Error("Invalid move");
@@ -65,41 +99,41 @@ export class TicTacToeTransition implements StateTransition<TicTacToeState, TicT
         );
     }
 
-    isValid(state: TicTacToeState, _nextState: TicTacToeState, move: TicTacToeMove): boolean {
+    isValid(state: TicTacToeState, _nextState: TicTacToeState, move: TicTacToeMove): Bool {
         // Check if position is valid
         if (move.position < 0 || move.position > 8) {
             console.error("Invalid move position:", move.position);
-            return false;
+            return Bool(false);
         }
 
         
         // Check if position is empty
         if (state.board[move.position] !== 0) {
             console.error("Invalid move position:", move.position);
-            return false;
+            return Bool(false);
         }
         
         // Check if it's the player's turn
         if (move.player !== state.currentPlayer) {
             console.error("Invalid move player:", move.player);
-            return false;
+            return Bool(false);
         }
 
         if (_nextState) {
             //check that the next state is correctly updated
             if (_nextState.board[move.position].toString() !== move.player) {
                 console.error("Next state is not correctly updated", _nextState.board[move.position].toString(), move.player);
-                return false;
+                return Bool(false);
             }
         }
         
         // Check if game is not already won
         if (state.winner !== null) {
             console.error("Game already won");
-            return false;
+            return Bool(false);
         }
 
-        return true;
+        return Bool(true);
     }
 
     private checkWinner(board: Cell[]): number | null {

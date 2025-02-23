@@ -1,4 +1,4 @@
-import { Field } from 'o1js';
+import { Bool, Field } from 'o1js';
 import { State, StateTransition } from './State';
 import { WebRTCManager } from '../network/WebRTCManager';
 
@@ -48,7 +48,7 @@ export class StateManager<S extends State, M> {
     }
 
     // Verify a proposed transition
-    verifyTransition(prevState: S, nextState: S, move: M): boolean {
+    verifyTransition(prevState: S, nextState: S, move: M): Bool {
         return this.transition.isValid(prevState, nextState, move);
     }
 

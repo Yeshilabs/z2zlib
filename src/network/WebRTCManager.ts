@@ -1,5 +1,5 @@
 import { Socket } from 'socket.io-client';
-import { KeyExchangeManager } from './KeyExchangeManager';
+import { ECDSACryptoManager } from './ECDSACryptoManager';
 import { StateManager } from '../state/StateManager';
 import { BaseState } from '../state/State';
 export type JsonData = { [key: string]: any };
@@ -13,7 +13,7 @@ export class WebRTCManager {
   private peerConnection: RTCPeerConnection | null = null;
   dataChannel: RTCDataChannel | null = null;
   private onMessageCallback: ((data: JsonData) => void) | null = null;
-  private keyExchangeManager: KeyExchangeManager | null;
+  private keyExchangeManager: ECDSACryptoManager | null;
   private messageListeners: Map<string, (message: JsonData) => void> = new Map();
 
   isHost: boolean = false;
@@ -29,7 +29,7 @@ export class WebRTCManager {
       iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
     }
   ) {
-    this.keyExchangeManager = new KeyExchangeManager();
+    this.keyExchangeManager = new ECDSACryptoManager();
     this.stateManager = stateManager;
     this.onDataChannelOpenCallback = onDataChannelOpenCallback;
   }
