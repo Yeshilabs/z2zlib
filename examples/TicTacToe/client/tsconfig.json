@@ -1,0 +1,46 @@
+{
+  "compilerOptions": {
+    "moduleDetection": "force",
+    "composite": true,
+    "allowImportingTsExtensions": true,
+    "target": "es2020",
+    "module": "esnext",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "strict": true,
+    "strictPropertyInitialization": false,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "esModuleInterop": true,
+    "moduleResolution": "bundler",  // Changed from "node" to "bundler"
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "allowJs": true,
+    "declaration": true,
+    "sourceMap": true,
+    "noFallthroughCasesInSwitch": true,
+    "allowSyntheticDefaultImports": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "incremental": true,
+    "resolveJsonModule": true,
+    "jsx": "preserve",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./*"],  // Changed from "./src/*" to "./*" since we're already in the UI directory
+      "z2zlib/*": ["../../../../../*"]  // Added to resolve imports from main library
+    },
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ]
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    "../../../../../**/*.ts"  // Added to include files from main library
+  ],
+  "exclude": ["node_modules"]
+}

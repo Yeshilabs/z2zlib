@@ -1,0 +1,16 @@
+{ "dependencies": {
+    "@types/node": "^22.10.2",
+    "@types/react": "^19.0.1",
+    "express": "^4.21.2",
+    "install": "^0.13.0",
+    "npm": "^10.9.2",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1",
+    "typescript": "^5.7.2"
+
+  },
+  "devDependencies": {
+    "@types/socket.io": "^3.0.1",
+    "@types/socket.io-client": "^1.4.36"
+  }
+}
