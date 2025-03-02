@@ -74,7 +74,7 @@ npm i z2zlib
 
 ## Documentation
 
-For detailed documentation, visit the [z2zlib documentation](https://example.com/docs).
+For detailed documentation, visit the [z2zlib documentation](https://yeshilabs.github.io/z2zlib-docs/).
 
 ## Examples
 
